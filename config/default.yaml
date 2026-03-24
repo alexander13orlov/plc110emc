@@ -5,8 +5,6 @@ plc:
   port: 502
   timeout: 3.0
   poll_interval: 0.5  # секунды, частота опроса
-  min_delay_read: 0.0   # 200 мс пауза после чтения
-  min_delay_write: 0.0  # 300 мс пауза после записи
   retries: 3
   device_id: 1
 

@@ -20,8 +20,6 @@ class ModbusPLC:
     DEFAULT_TIMEOUT = 3.0
     DEFAULT_RETRIES = 3
     DEFAULT_DEVICE_ID = 1
-    DEFAULT_MIN_DELAY_READ = 0.2   # 200 мс
-    DEFAULT_MIN_DELAY_WRITE = 0.3  # 300 мс
     
     def __init__(self):
         """Инициализация клиента."""
@@ -31,34 +29,15 @@ class ModbusPLC:
         self.retries: int = config.get_int("plc.retries", self.DEFAULT_RETRIES)
         self.device_id: int = config.get_int("plc.device_id", self.DEFAULT_DEVICE_ID)
         
-        # Паузы между запросами
-        self.min_delay_read: float = config.get_float("plc.min_delay_read", self.DEFAULT_MIN_DELAY_READ)
-        self.min_delay_write: float = config.get_float("plc.min_delay_write", self.DEFAULT_MIN_DELAY_WRITE)
-        
         self.client: Optional[AsyncModbusTcpClient] = None
         self._connected: bool = False
         self._lock = asyncio.Lock()
-        self._last_request_time: float = 0  # Время последнего запроса
         
         # Статистика
         self.total_requests = 0
         self.successful_requests = 0
         self.failed_requests = 0
         self.last_error: Optional[str] = None
-    
-    async def _wait_min_delay(self, delay: float):
-        """
-        Ожидание минимальной задержки между запросами.
-        
-        Args:
-            delay: Минимальная задержка в секундах
-        """
-        if self._last_request_time > 0:
-            elapsed = asyncio.get_event_loop().time() - self._last_request_time
-            if elapsed < delay:
-                wait_time = delay - elapsed
-                logger.debug(f"Ожидание {wait_time:.3f}с перед следующим запросом")
-                await asyncio.sleep(wait_time)
     
     async def connect(self) -> bool:
         """Установка соединения с ПЛК."""
@@ -78,7 +57,6 @@ class ModbusPLC:
                 
                 if self._connected:
                     logger.info(f"Подключено к Modbus TCP {self.host}:{self.port}")
-                    self._last_request_time = asyncio.get_event_loop().time()
                 else:
                     logger.error(f"Ошибка подключения Modbus TCP: не удалось подключиться")
                 
@@ -101,18 +79,9 @@ class ModbusPLC:
         """Проверка состояния соединения."""
         return self._connected and self.client is not None and self.client.connected
     
-    async def _execute_request(self, request_func, delay: float, *args, **kwargs) -> Optional[Any]:
+    async def _execute_request(self, request_func, *args, **kwargs) -> Optional[Any]:
         """
-        Выполнение запроса с обработкой ошибок, блокировкой и минимальной паузой.
-        
-        Args:
-            request_func: Функция запроса
-            delay: Минимальная задержка перед запросом
-            *args: Аргументы функции
-            **kwargs: Ключевые аргументы функции
-        
-        Returns:
-            Ответ Modbus или None при ошибке
+        Выполнение запроса с обработкой ошибок и блокировкой.
         """
         async with self._lock:
             if not await self.is_connected():
@@ -123,11 +92,7 @@ class ModbusPLC:
                 logger.error("Клиент не инициализирован")
                 return None
             
-            # Ожидание минимальной задержки перед запросом
-            await self._wait_min_delay(delay)
-            
             self.total_requests += 1
-            request_start = asyncio.get_event_loop().time()
             
             for attempt in range(self.retries):
                 try:
@@ -144,7 +109,6 @@ class ModbusPLC:
                         continue
                     
                     self.successful_requests += 1
-                    self._last_request_time = asyncio.get_event_loop().time()
                     return response
                     
                 except ModbusException as e:
@@ -159,7 +123,6 @@ class ModbusPLC:
                     break
             
             self.failed_requests += 1
-            self._last_request_time = asyncio.get_event_loop().time()
             return None
     
     # ========== HOLDING REGISTERS (FC 03/06/16) ==========
@@ -186,7 +149,6 @@ class ModbusPLC:
         
         response = await self._execute_request(
             self.client.read_holding_registers,
-            self.min_delay_read,  # Пауза для чтения
             address=address,
             count=count,
             device_id=dev_id
@@ -221,7 +183,6 @@ class ModbusPLC:
         
         response = await self._execute_request(
             self.client.write_register,
-            self.min_delay_write,  # Пауза для записи
             address=address,
             value=value,
             device_id=dev_id
@@ -256,7 +217,6 @@ class ModbusPLC:
         
         response = await self._execute_request(
             self.client.write_registers,
-            self.min_delay_write,  # Пауза для записи
             address=address,
             values=values,
             device_id=dev_id
@@ -293,7 +253,6 @@ class ModbusPLC:
         
         response = await self._execute_request(
             self.client.read_discrete_inputs,
-            self.min_delay_read,  # Пауза для чтения
             address=address,
             count=count,
             device_id=dev_id
@@ -331,7 +290,6 @@ class ModbusPLC:
         
         response = await self._execute_request(
             self.client.read_coils,
-            self.min_delay_read,  # Пауза для чтения
             address=address,
             count=count,
             device_id=dev_id
@@ -368,7 +326,6 @@ class ModbusPLC:
         
         response = await self._execute_request(
             self.client.write_coil,
-            self.min_delay_write,  # Пауза для записи
             address=address,
             value=bool_value,
             device_id=dev_id
