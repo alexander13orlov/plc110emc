@@ -1,0 +1,112 @@
+# config/default.yaml
+# Конфигурация для EMC PLC110
+plc:
+  host: "10.77.151.21"
+  port: 502
+  timeout: 3.0
+  poll_interval: 0.5  # секунды, частота опроса
+  min_delay_read: 0.0   # 200 мс пауза после чтения
+  min_delay_write: 0.0  # 300 мс пауза после записи
+  retries: 3
+  device_id: 1
+
+modbus_mapping:
+  # DO (Digital Output) - FC 03/06/16
+  do:
+    start_address: 40000
+    count: 24
+    fast_start: 40020  # начальный адрес быстрых выходов (fdo)
+    fast_count: 4
+    # тип: 1 - включен, 0 - выключен
+    # примечание: физическое переключение ~1 сек
+
+  # DI (Digital Input) - FC 02
+  di:
+    start_address: 10001
+    count: 36
+    fast_start: 10001  # первые 4 быстрых входа (fdi)
+    fast_count: 4
+
+  # RS-485 COM1 - FC 03/06/16
+  rs485_com1:
+    enable: 40100
+    period: 40101
+    slave_id: 40102
+    function_code: 40103
+    register_address: 40104
+    request_count_hi: 40105
+    request_count_lo: 40106
+    success_count_hi: 40107
+    success_count_lo: 40108
+    last_error: 40109
+    success_percent: 40110
+
+  # RS-485 COM2
+  rs485_com2:
+    enable: 40112
+    period: 40113
+    slave_id: 40114
+    function_code: 40115
+    register_address: 40116
+    request_count_hi: 40117
+    request_count_lo: 40118
+    success_count_hi: 40119
+    success_count_lo: 40120
+    last_error: 40121
+    success_percent: 40122
+
+  # RS-232 COM4
+  rs232_com4:
+    enable: 40300
+    period: 40301
+    slave_id: 40302
+    function_code: 40303
+    register_address: 40304
+    request_count_hi: 40305
+    request_count_lo: 40306
+    success_count_hi: 40307
+    success_count_lo: 40308
+    last_error: 40309
+    success_percent: 40310
+
+  # RS-232 Debug COM5
+  rs232_com5:
+    enable: 50300
+    period: 50301
+    slave_id: 50302
+    function_code: 50303
+    register_address: 50304
+    request_count_hi: 50305
+    request_count_lo: 50306
+    success_count_hi: 50307
+    success_count_lo: 50308
+    last_error: 50309
+    success_percent: 50310
+
+  # USB Statistics
+  usb:
+    total_ops_hi: 40200
+    total_ops_lo: 40201
+    success_ops_hi: 40202
+    success_ops_lo: 40203
+    errors_hi: 40204
+    errors_lo: 40205
+    success_percent: 40206
+    last_error: 40207
+    flash_detected: 40208
+    test_control: 40220
+
+  # RTC
+  rtc:
+    year: 40500
+    month: 40501
+    day: 40502
+    hour: 40503
+    minute: 40504
+    second: 40505
+    weekday: 40506
+
+  # Pull-up Resistors (Coils) - FC 01/05
+  pullup:
+    com1: 1
+    com2: 2
